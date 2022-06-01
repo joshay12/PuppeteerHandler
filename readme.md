@@ -32,7 +32,7 @@ Selectors Selector = new Selectors.Builder().AddClass("CLASS_NAME_WITHOUT_PERIOD
 ```
 OR
 ```CSharp
-Selectors Selector = new Selectors("ELEMENT_ID_WITHOUT_HASHTAGE/POUND_SYMBOL");
+Selectors Selector = new Selectors("ELEMENT_ID_WITHOUT_HASHTAG/POUND_SYMBOL");
 ```
 OR if you just want to use normal selectors
 ```CSharp
