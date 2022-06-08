@@ -70,3 +70,19 @@ OR
 AsyncHandler NAME = (await new AsyncHandler.Builder().SetBrowserProxy(Proxies).CreateBrowserAsync()).BuildAsync();
 ```
 Using this, it will automatically rotate the proxies for you.
+
+## Handling Captchas
+
+At the moment, only text captchas work.  You will need a 2Captcha account and the 2Captcha API Key.  Then, when creating your browser, insert your API Key like this.
+
+```CSharp
+Handler NAME = new Handler.Builder().AllowCaptchas("API_KEY").CreateBrowser().Build();
+```
+OR 
+```CSharp
+AsyncHandler NAME = (await new AsyncHandler.Builder().AllowCaptchas("API_KEY").CreateBrowserAsync()).BuildAsync();
+```
+Then, you can solve the text captchas with the following (will display Handler only; not AsyncHandler).
+```CSharp
+string Result = NAME.SolveImageCaptcha(new Selectors("SELECTOR_OF_CAPTCHA_IMAGE"));
+```
