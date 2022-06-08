@@ -1,4 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using PuppeteerSharp;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace PuppeteerHandler
 {
@@ -6,14 +11,118 @@ namespace PuppeteerHandler
     {
         private readonly string[] Values;
 
-        public Selectors(string Id) => Values = new string[1] { "#" + Id };
-        private Selectors(string[] Selectors) => this.Values = Selectors;
+        public Selectors(string Id) => Values = Selectors.FromSelector("#" + Id).Values;
+        private Selectors(string[] Selectors) => Values = Selectors;
 
         public static Selectors FromSelector(string Selector) => new Selectors(new string[1] { Selector });
 
         public static implicit operator string(Selectors Selector) => Selector.ToString();
 
-        public override string ToString() => string.Join(", ", Values);
+        public ElementHandle GetElement(Page Page) => GetElementAsync(Page).Result;
+        public async Task<ElementHandle> GetElementAsync(Page Page)
+        {
+            if (Page == null)
+            {
+                Log.WL($"An error occurred when attempting to retrieve the element of a selector.  The page was NULL!", ConsoleColor.Red);
+
+                return null;
+            }
+
+            try
+            {
+                return await Page.QuerySelectorAsync(this);
+            }
+            catch (Exception e)
+            {
+                if (AsyncHandler.DebugMode)
+                    Log.WL($"A severe error occurred when attempting to retrieve the element of a selector.  Stacktrace: " + e, ConsoleColor.DarkRed);
+                else
+                    Log.WL($"A severe error occurred when attempting to retrieve the element of a selector.  Message: " + e.Message, ConsoleColor.DarkRed);
+            }
+
+            return null;
+        }
+
+        public string GetContent(Page Page) => GetContentAsync(Page).Result;
+        public async Task<string> GetContentAsync(Page Page)
+        {
+            ElementHandle Element = await GetElementAsync(Page);
+
+            if (Element == null)
+            {
+                Log.WL($"An error occurred when attempting to retrieve an element's content.  The element was NULL!", ConsoleColor.Red);
+
+                return null;
+            }
+
+            try
+            {
+                return (await Page.EvaluateFunctionAsync("e => e.textContent", Element))?.ToString();
+            }
+            catch (Exception e)
+            {
+                if (AsyncHandler.DebugMode)
+                    Log.WL($"A severe error occurred when attempting to retrieve an element's content.  Stacktrace: " + e, ConsoleColor.DarkRed);
+                else
+                    Log.WL($"A severe error occurred when attempting to retrieve an element's content.  Message: " + e.Message, ConsoleColor.DarkRed);
+            }
+
+            return null;
+        }
+
+        public string GetAttribute(Page Page, string Name) => GetAttributeAsync(Page, Name).Result;
+        public async Task<string> GetAttributeAsync(Page Page, string Name)
+        {
+            ElementHandle Element = await GetElementAsync(Page);
+
+            if (Element == null)
+            {
+                Log.WL($"An error occurred when attempting to retrieve an element's attribute.  The element was NULL!", ConsoleColor.Red);
+
+                return null;
+            }
+
+            try
+            {
+                return (await Page.EvaluateFunctionAsync("e => e.getAttribute(\"" + Name + "\")", Element))?.ToString();
+            }
+            catch (Exception e)
+            {
+                if (AsyncHandler.DebugMode)
+                    Log.WL($"A severe error occurred when attempting to retrieve an element's attribute.  Stacktrace: " + e, ConsoleColor.DarkRed);
+                else
+                    Log.WL($"A severe error occurred when attempting to retrieve an element's attribute.  Message: " + e.Message, ConsoleColor.DarkRed);
+            }
+
+            return null;
+        }
+
+        public void Screenshot(Page Page, string SaveAs) => ScreenshotAsync(Page, SaveAs).GetAwaiter().GetResult();
+        public async Task ScreenshotAsync(Page Page, string SaveAs)
+        {
+            ElementHandle Element = await GetElementAsync(Page);
+
+            if (Element == null)
+            {
+                Log.WL($"An error occurred when attempting to screenshot an element.  The element was NULL!", ConsoleColor.Red);
+
+                return;
+            }
+
+            try
+            {
+                await Element.ScreenshotAsync(SaveAs);
+            }
+            catch (Exception e)
+            {
+                if (AsyncHandler.DebugMode)
+                    Log.WL($"A severe error occurred when attempting to screenshot the page.  Stacktrace: " + e, ConsoleColor.DarkRed);
+                else
+                    Log.WL($"A severe error occurred when attempting to screenshot the page.  Message: " + e.Message, ConsoleColor.DarkRed);
+            }
+        }
+
+        public override string ToString() => string.Join(", ", Values.Where(x => !string.IsNullOrWhiteSpace(x)));
 
         public class Builder
         {
@@ -26,12 +135,10 @@ namespace PuppeteerHandler
                 Current = new List<string>();
             }
 
+            [Obsolete("This constructor is deprecated.  Please use \"new Selectors(\"ID\");\" instead.", false)]
             public Builder(string Id)
             {
-                Selectors = new List<string>()
-                {
-                    "#" + Id
-                };
+                Selectors = new string[1] { "#" + Id }.ToList();
                 Current = new List<string>();
             }
 

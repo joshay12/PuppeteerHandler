@@ -1,7 +1,12 @@
 ﻿using PuppeteerSharp;
 using PuppeteerSharp.Input;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace PuppeteerHandler
@@ -20,14 +25,20 @@ namespace PuppeteerHandler
         public Selectors CurrentSelector { get; private set; }
         public string Proxy { get; }
         public string Authentication { get; }
+        public string CaptchaKey { get; }
+        public int Width { get; }
+        public int Height { get; }
 
-        public AsyncHandler(BrowserFetcher Fetcher, Browser Browser, BrowserContext Context, int DefaultTimeout, string Proxy, string Authentication)
+        public AsyncHandler(BrowserFetcher Fetcher, Browser Browser, BrowserContext Context, int DefaultTimeout, string Proxy, string Authentication, string CaptchaKey, int Width, int Height)
         {
             this.Fetcher = Fetcher;
             this.Browser = Browser;
             this.Context = Context;
             this.Proxy = Proxy;
             this.Authentication = Authentication;
+            this.CaptchaKey = CaptchaKey;
+            this.Width = Width;
+            this.Height = Height;
 
             Pages = new PageCollection(this.Browser, DefaultTimeout);
         }
@@ -47,7 +58,7 @@ namespace PuppeteerHandler
             if (string.IsNullOrWhiteSpace(Location))
                 return this;
 
-            await Pages.Add(Location, WaitUntil, Authentication);
+            await Pages.Add(Location, WaitUntil, Authentication, Width, Height);
 
             if (CurrentPage == null)
                 CurrentPage = Pages.Last();
@@ -63,17 +74,17 @@ namespace PuppeteerHandler
                 if (!string.IsNullOrWhiteSpace(Authentication))
                     await Page.AuthenticateAsync(new Credentials { Username = Authentication.Split(':')[0], Password = Authentication.Split(':')[1] });
 
-                Pages.Add(Page);
+                await Pages.Add(Page, Width, Height);
 
                 if (CurrentPage == null)
                     CurrentPage = Pages.Last();
             }
             catch (Exception e)
             {
-                if (AsyncHandler.DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to open a new page.  Stacktrace: " + e);
+                if (DebugMode)
+                    Log.WL($"A severe error occurred when attempting to open a new page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to open a new page.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when attempting to open a new page.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -84,7 +95,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when attempting to close page.  The page was NULL!");
+                Log.WL($"An error occurred when attempting to close page.  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -101,7 +112,7 @@ namespace PuppeteerHandler
         {
             if (Pages == null || Pages.Length == 0)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when attempting to close pages.  The pages were NULL, or there were no pages in the array!");
+                Log.WL($"An error occurred when attempting to close pages.  The pages were NULL, or there were no pages in the array!", ConsoleColor.Red);
 
                 return this;
             }
@@ -119,7 +130,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when trying to go to the URL.  The page was NULL!");
+                Log.WL($"An error occurred when trying to go to the URL.  The page was NULL!", ConsoleColor.DarkRed);
 
                 return this;
             }
@@ -131,9 +142,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when trying to go to the URL.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when trying to go to the URL.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when trying to go to the URL.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when trying to go to the URL.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -143,7 +154,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when trying to go back a page.  The page was NULL!");
+                Log.WL($"An error occurred when trying to go back a page.  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -155,9 +166,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when trying to go back a page.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when trying to go back a page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when trying to go back a page.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when trying to go back a page.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -167,7 +178,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when trying to go forward a page.  The page was NULL!");
+                Log.WL($"An error occurred when trying to go forward a page.  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -179,9 +190,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when trying to go forward a page.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when trying to go forward a page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when trying to go forward a page.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when trying to go forward a page.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -198,9 +209,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when delaying the task.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when delaying the task.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when delaying the task.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when delaying the task.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -210,7 +221,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when waiting for a page (DOM).  The page was NULL!");
+                Log.WL($"An error occurred when waiting for a page (DOM).  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -222,9 +233,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a page (DOM).  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when waiting for a page (DOM).  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a page (DOM).  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when waiting for a page (DOM).  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -234,7 +245,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when waiting for a page (Load).  The page was NULL!");
+                Log.WL($"An error occurred when waiting for a page (Load).  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -246,9 +257,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a page (Load).  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when waiting for a page (Load).  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a page (Load).  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when waiting for a page (Load).  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -258,7 +269,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when waiting for a page (Net0).  The page was NULL!");
+                Log.WL($"An error occurred when waiting for a page (Net0).  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -270,9 +281,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a page (Net0).  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when waiting for a page (Net0).  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a page (Net0).  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when waiting for a page (Net0).  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -282,7 +293,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when waiting for a page (Net2).  The page was NULL!");
+                Log.WL($"An error occurred when waiting for a page (Net2).  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -294,9 +305,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a page (Net2).  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when waiting for a page (Net2).  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a page (Net2).  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when waiting for a page (Net2).  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -306,7 +317,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when waiting for a selector.  The page was NULL!");
+                Log.WL($"An error occurred when waiting for a selector.  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -318,9 +329,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a selector.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when waiting for a selector.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a selector.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when waiting for a selector.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -330,7 +341,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when waiting for a function.  The page was NULL!");
+                Log.WL($"An error occurred when waiting for a function.  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -342,9 +353,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a function.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when waiting for a function.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a function.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when waiting for a function.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -354,7 +365,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when waiting for timeout.  The page was NULL!");
+                Log.WL($"An error occurred when waiting for timeout.  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -366,9 +377,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for timeout.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when waiting for timeout.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for timeout.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when waiting for timeout.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -378,7 +389,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when waiting for an expression.  The page was NULL!");
+                Log.WL($"An error occurred when waiting for an expression.  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -390,9 +401,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for an expression.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when waiting for an expression.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for an expression.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when waiting for an expression.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -419,14 +430,14 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when attempting to click the page.  The page was NULL!");
+                Log.WL($"An error occurred when attempting to click the page.  The page was NULL!", ConsoleColor.DarkRed);
 
                 return this;
             }
 
             if (Selector == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when attempting to click the page.  The selector was NULL!");
+                Log.WL($"An error occurred when attempting to click the page.  The selector was NULL!", ConsoleColor.DarkRed);
 
                 return this;
             }
@@ -438,9 +449,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to click the page.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when attempting to click the page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to click the page.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when attempting to click the page.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -457,14 +468,14 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when attempting to type on the page.  The page was NULL!");
+                Log.WL($"An error occurred when attempting to type on the page.  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
 
             if (Selector == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when attempting to type on the page.  The selector was NULL!");
+                Log.WL($"An error occurred when attempting to type on the page.  The selector was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -479,9 +490,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to type on the page.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when attempting to type on the page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to type on the page.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when attempting to type on the page.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -494,14 +505,14 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when attempting to hover an element on the page.  The page was NULL!");
+                Log.WL($"An error occurred when attempting to hover an element on the page.  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
 
             if (Selector == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when attempting to hover an element on the page.  The selector was NULL!");
+                Log.WL($"An error occurred when attempting to hover an element on the page.  The selector was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -513,14 +524,181 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to hover an element on the page.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when attempting to hover an element on the page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to hover an element on the page.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when attempting to hover an element on the page.  Message: " + e.Message, ConsoleColor.DarkRed);
+            }
+
+            return this;
+        }
+
+        public async Task<AsyncHandler> ClearFieldAsync() => await ClearFieldAsync(CurrentSelector, CurrentPage);
+        public async Task<AsyncHandler> ClearFieldAsync(Page Page) => await ClearFieldAsync(CurrentSelector, Page);
+        public async Task<AsyncHandler> ClearFieldAsync(Selectors Selector) => await ClearFieldAsync(Selector, CurrentPage);
+        public async Task<AsyncHandler> ClearFieldAsync(Selectors Selector, Page Page)
+        {
+            if (Page == null)
+            {
+                Log.WL($"An error occurred when attempting to clear an element's value.  The page was NULL!", ConsoleColor.Red);
+
+                return this;
+            }
+
+            if (Selector == null)
+            {
+                Log.WL($"An error occurred when attempting to clear an element's value.  The selector was NULL!", ConsoleColor.Red);
+
+                return this;
+            }
+
+            try
+            {
+                await Page.FocusAsync(Selector);
+                await Page.Keyboard.DownAsync("Control");
+                await Page.Keyboard.PressAsync("A");
+                await Page.Keyboard.UpAsync("Control");
+                await Page.Keyboard.PressAsync("Backspace");
+            }
+            catch (Exception e)
+            {
+                if (DebugMode)
+                    Log.WL($"A severe error occurred when attempting to clear an element's value.  Stacktrace: " + e, ConsoleColor.DarkRed);
+                else
+                    Log.WL($"A severe error occurred when attempting to clear an element's value.  Message: " + e.Message, ConsoleColor.DarkRed);
+            }
+
+            return this;
+        }
+
+        public AsyncHandler AddDialogEvent(Action<object, DialogEventArgs> Action) => AddDialogEvent(CurrentPage, Action);
+        public AsyncHandler AddDialogEvent(Page Page, Action<object, DialogEventArgs> Action)
+        {
+            if (Page == null)
+            {
+                Log.WL($"An error occurred when attempting to add a dialog event.  The page was NULL!", ConsoleColor.Red);
+
+                return this;
+            }
+
+            if (Action == null)
+            {
+                Log.WL($"An error occurred when attempting to add a dialog event.  The action was NULL!", ConsoleColor.Red);
+
+                return this;
+            }
+
+            try
+            {
+                Page.Dialog += new EventHandler<DialogEventArgs>(Action);
+            }
+            catch (Exception e)
+            {
+                if (DebugMode)
+                    Log.WL($"A severe error occurred when attempting to add a dialog event.  Stacktrace: " + e, ConsoleColor.DarkRed);
+                else
+                    Log.WL($"A severe error occurred when attempting to add a dialog event.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
         }
         #endregion
+
+        public async Task<string> SolveImageCaptchaAsync() => await SolveImageCaptchaAsync(CurrentPage, CurrentSelector);
+        public async Task<string> SolveImageCaptchaAsync(Page Page) => await SolveImageCaptchaAsync(Page, CurrentSelector);
+        public async Task<string> SolveImageCaptchaAsync(Selectors CaptchaSelector) => await SolveImageCaptchaAsync(CurrentPage, CaptchaSelector);
+        public async Task<string> SolveImageCaptchaAsync(Page Page, Selectors CaptchaSelector)
+        {
+            if (string.IsNullOrWhiteSpace(CaptchaKey))
+            {
+                Log.WL($"An error occurred when attempting to solve the image captcha.  The captcha key was NULL!  You can set the key when you build the AsyncHandler.", ConsoleColor.Red);
+
+                return null;
+            }
+
+            if (Page == null)
+            {
+                Log.WL($"An error occurred when attempting to solve the image captcha.  The page was NULL!", ConsoleColor.Red);
+
+                return null;
+            }
+
+            if (CaptchaSelector == null)
+            {
+                Log.WL($"An error occurred when attempting to solve the image captcha.  The selector was NULL!", ConsoleColor.Red);
+
+                return null;
+            }
+
+            string Guid = new Guid().ToString();
+
+            await CaptchaSelector.ScreenshotAsync(Page, Guid + ".png");
+
+            Log.WL($"Please wait for the Image Captcha to solve.  This usually takes 10 seconds, but can take up to 30 seconds.", ConsoleColor.DarkYellow);
+
+            try
+            {
+                _2CaptchaAPI._2Captcha Captcha = new _2CaptchaAPI._2Captcha(CaptchaKey);
+                _2CaptchaAPI._2Captcha.Result Result = await Captcha.SolveImage(new FileStream(Guid + ".png", FileMode.Open, FileAccess.Read, FileShare.Read), _2CaptchaAPI.Enums.FileType.Png);
+
+                return Result.ResponseObject.ToString();
+            }
+            catch (Exception e)
+            {
+                if (DebugMode)
+                    Log.WL($"A severe error occurred when attempting to solve the image captcha.  Stacktrace: " + e, ConsoleColor.DarkRed);
+                else
+                    Log.WL($"A severe error occurred when attempting to solve the image captcha.  Message: " + e.Message, ConsoleColor.DarkRed);
+            }
+
+            return null;
+        }
+
+        public async Task<AsyncHandler> ScreenshotAsync(string SaveAs) => await ScreenshotAsync(CurrentPage, SaveAs);
+        public async Task<AsyncHandler> ScreenshotAsync(Page Page, string SaveAs)
+        {
+            if (Page == null)
+            {
+                Log.WL($"An error occurred when attempting to screenshot the page.  The page was NULL!", ConsoleColor.Red);
+
+                return this;
+            }
+
+            try
+            {
+                await Page.ScreenshotAsync(SaveAs);
+            }
+            catch (Exception e)
+            {
+                if (DebugMode)
+                    Log.WL($"A severe error occurred when attempting to screenshot the page.  Stacktrace: " + e, ConsoleColor.DarkRed);
+                else
+                    Log.WL($"A severe error occurred when attempting to screenshot the page.  Message: " + e.Message, ConsoleColor.DarkRed);
+            }
+
+            return this;
+        }
+
+        public async Task<string> DownloadMediaAsync(string Url, string SaveAs)
+        {
+            try
+            {
+                using (WebClient Client = new WebClient())
+                {
+                    await Client.DownloadFileTaskAsync(new Uri(Url), SaveAs);
+                }
+
+                return SaveAs;
+            }
+            catch (Exception e)
+            {
+                if (DebugMode)
+                    Log.WL($"A severe error occurred when attempting to download media.  Stacktrace: " + e, ConsoleColor.DarkRed);
+                else
+                    Log.WL($"A severe error occurred when attempting to download media.  Message: " + e.Message, ConsoleColor.DarkRed);
+            }
+
+            return null;
+        }
 
         public async Task PauseAsync() => await Task.Delay(-1);
 
@@ -529,7 +707,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when attempting to retrieve the page's content.  The page was NULL!");
+                Log.WL($"An error occurred when attempting to retrieve the page's content.  The page was NULL!", ConsoleColor.Red);
 
                 return null;
             }
@@ -541,9 +719,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to hover an element on the page.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when attempting to hover an element on the page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to hover an element on the page.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when attempting to hover an element on the page.  Message: " + e.Message, ConsoleColor.DarkRed);
 
                 return null;
             }
@@ -575,15 +753,15 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to close the browser.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when attempting to close the browser.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to close the browser.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when attempting to close the browser.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             Dispose();
         }
 
-        public Handler ToHandler() => new Handler(Fetcher, Browser, Context, DefaultTimeout, Proxy, Authentication);
+        public Handler ToHandler() => new Handler(Fetcher, Browser, Context, DefaultTimeout, Proxy, Authentication, CaptchaKey, Width, Height);
 
         public void Dispose()
         {
@@ -602,14 +780,25 @@ namespace PuppeteerHandler
             private readonly BrowserFetcher Fetcher;
             private string Proxy;
             private string Authentication;
+            private string CaptchaKey;
             private Browser Browser;
             private BrowserContext Context;
+            private int Width;
+            private int Height;
 
             public Builder(int DefaultTimeout = 30000, Product Browser = Product.Chrome)
             {
                 Fetcher = new BrowserFetcher(new BrowserFetcherOptions { Product = Browser });
 
                 this.DefaultTimeout = DefaultTimeout;
+            }
+
+            public Builder SetBrowserSize(int Width, int Height)
+            {
+                this.Width = Width;
+                this.Height = Height;
+
+                return this;
             }
 
             public Builder SetBrowserProxy(ProxyRotation Proxies)
@@ -619,6 +808,13 @@ namespace PuppeteerHandler
 
                 Proxy = Proxies.Next();
                 Authentication = Proxies[Proxy];
+
+                return this;
+            }
+
+            public Builder AllowCaptchas(string _2CaptchaKey)
+            {
+                CaptchaKey = _2CaptchaKey;
 
                 return this;
             }
@@ -645,16 +841,16 @@ namespace PuppeteerHandler
                 catch (Exception e)
                 {
                     if (DebugMode)
-                        Log.WL($"{ ChatColor.Red }A severe error occurred when attempting to create a new browser.  Stacktrace: " + e);
+                        Log.WL($"A severe error occurred when attempting to create a new browser.  Stacktrace: " + e, ConsoleColor.DarkRed);
                     else
-                        Log.WL($"{ ChatColor.Red }A severe error occurred when attempting to create a new browser.  Message: " + e.Message);
+                        Log.WL($"A severe error occurred when attempting to create a new browser.  Message: " + e.Message, ConsoleColor.DarkRed);
                 }
 
                 return this;
             }
 
-            public Handler Build() => new Handler(Fetcher, Browser, Context, DefaultTimeout, Proxy, Authentication);
-            public AsyncHandler BuildAsync() => new AsyncHandler(Fetcher, Browser, Context, DefaultTimeout, Proxy, Authentication);
+            public Handler Build() => new Handler(Fetcher, Browser, Context, DefaultTimeout, Proxy, Authentication, CaptchaKey, Width, Height);
+            public AsyncHandler BuildAsync() => new AsyncHandler(Fetcher, Browser, Context, DefaultTimeout, Proxy, Authentication, CaptchaKey, Width, Height);
         }
     }
 
@@ -672,14 +868,20 @@ namespace PuppeteerHandler
         public Selectors CurrentSelector { get; private set; }
         public string Proxy { get; }
         public string Authentication { get; }
+        public string CaptchaKey { get; }
+        public int Width { get; }
+        public int Height { get; }
 
-        public Handler(BrowserFetcher Fetcher, Browser Browser, BrowserContext Context, int DefaultTimeout, string Proxy, string Authentication)
+        public Handler(BrowserFetcher Fetcher, Browser Browser, BrowserContext Context, int DefaultTimeout, string Proxy, string Authentication, string CaptchaKey, int Width, int Height)
         {
             this.Fetcher = Fetcher;
             this.Browser = Browser;
             this.Context = Context;
             this.Proxy = Proxy;
             this.Authentication = Authentication;
+            this.CaptchaKey = CaptchaKey;
+            this.Width = Width;
+            this.Height = Height;
 
             Pages = new PageCollection(this.Browser, DefaultTimeout);
         }
@@ -699,7 +901,7 @@ namespace PuppeteerHandler
             if (string.IsNullOrWhiteSpace(Location))
                 return this;
 
-            Pages.Add(Location, WaitUntil, Authentication).GetAwaiter().GetResult();
+            Pages.Add(Location, WaitUntil, Authentication, Width, Height).GetAwaiter().GetResult();
 
             if (CurrentPage == null)
                 CurrentPage = Pages.Last();
@@ -715,7 +917,7 @@ namespace PuppeteerHandler
                 if (!string.IsNullOrWhiteSpace(Authentication))
                     Page.AuthenticateAsync(new Credentials { Username = Authentication.Split(':')[0], Password = Authentication.Split(':')[1] }).GetAwaiter().GetResult();
 
-                Pages.Add(Page);
+                Pages.Add(Page, Width, Height).GetAwaiter().GetResult();
 
                 if (CurrentPage == null)
                     CurrentPage = Pages.Last();
@@ -723,9 +925,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (AsyncHandler.DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to open a new page.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when attempting to open a new page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to open a new page.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when attempting to open a new page.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -736,7 +938,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when attempting to close page.  The page was NULL!");
+                Log.WL($"An error occurred when attempting to close page.  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -753,7 +955,7 @@ namespace PuppeteerHandler
         {
             if (Pages == null || Pages.Length == 0)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when attempting to close pages.  The pages were NULL, or there were no pages in the array!");
+                Log.WL($"An error occurred when attempting to close pages.  The pages were NULL, or there were no pages in the array!", ConsoleColor.Red);
 
                 return this;
             }
@@ -771,7 +973,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when trying to go to the URL.  The page was NULL!");
+                Log.WL($"An error occurred when trying to go to the URL.  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -783,9 +985,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when trying to go to the URL.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when trying to go to the URL.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when trying to go to the URL.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when trying to go to the URL.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -795,7 +997,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when trying to go back a page.  The page was NULL!");
+                Log.WL($"An error occurred when trying to go back a page.  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -807,9 +1009,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when trying to go back a page.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when trying to go back a page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when trying to go back a page.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when trying to go back a page.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -819,7 +1021,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when trying to go forward a page.  The page was NULL!");
+                Log.WL($"An error occurred when trying to go forward a page.  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -831,9 +1033,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when trying to go forward a page.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when trying to go forward a page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when trying to go forward a page.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when trying to go forward a page.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -850,9 +1052,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when delaying the task.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when delaying the task.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when delaying the task.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when delaying the task.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -862,7 +1064,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when waiting for a page (DOM).  The page was NULL!");
+                Log.WL($"An error occurred when waiting for a page (DOM).  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -874,9 +1076,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a page (DOM).  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when waiting for a page (DOM).  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a page (DOM).  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when waiting for a page (DOM).  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -886,7 +1088,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when waiting for a page (Load).  The page was NULL!");
+                Log.WL($"An error occurred when waiting for a page (Load).  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -898,9 +1100,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a page (Load).  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when waiting for a page (Load).  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a page (Load).  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when waiting for a page (Load).  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -910,7 +1112,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when waiting for a page (Net0).  The page was NULL!");
+                Log.WL($"An error occurred when waiting for a page (Net0).  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -922,9 +1124,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a page (Net0).  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when waiting for a page (Net0).  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a page (Net0).  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when waiting for a page (Net0).  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -934,7 +1136,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when waiting for a page (Net2).  The page was NULL!");
+                Log.WL($"An error occurred when waiting for a page (Net2).  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -946,9 +1148,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a page (Net2).  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when waiting for a page (Net2).  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a page (Net2).  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when waiting for a page (Net2).  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -958,7 +1160,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when waiting for a selector.  The page was NULL!");
+                Log.WL($"An error occurred when waiting for a selector.  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -970,9 +1172,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a selector.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when waiting for a selector.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a selector.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when waiting for a selector.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -982,7 +1184,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when waiting for a function.  The page was NULL!");
+                Log.WL($"An error occurred when waiting for a function.  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -994,9 +1196,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a function.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when waiting for a function.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for a function.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when waiting for a function.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -1006,7 +1208,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when waiting for timeout.  The page was NULL!");
+                Log.WL($"An error occurred when waiting for timeout.  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -1018,9 +1220,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for timeout.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when waiting for timeout.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for timeout.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when waiting for timeout.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -1030,7 +1232,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when waiting for an expression.  The page was NULL!");
+                Log.WL($"An error occurred when waiting for an expression.  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -1042,9 +1244,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for an expression.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when waiting for an expression.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when waiting for an expression.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when waiting for an expression.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -1071,14 +1273,14 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when attempting to click the page.  The page was NULL!");
+                Log.WL($"An error occurred when attempting to click the page.  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
 
             if (Selector == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when attempting to click the page.  The selector was NULL!");
+                Log.WL($"An error occurred when attempting to click the page.  The selector was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -1090,9 +1292,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to click the page.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when attempting to click the page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to click the page.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when attempting to click the page.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -1109,14 +1311,14 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when attempting to type on the page.  The page was NULL!");
+                Log.WL($"An error occurred when attempting to type on the page.  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
 
             if (Selector == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when attempting to type on the page.  The selector was NULL!");
+                Log.WL($"An error occurred when attempting to type on the page.  The selector was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -1131,9 +1333,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to type on the page.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when attempting to type on the page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to type on the page.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when attempting to type on the page.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
@@ -1146,14 +1348,14 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when attempting to hover an element on the page.  The page was NULL!");
+                Log.WL($"An error occurred when attempting to hover an element on the page.  The page was NULL!", ConsoleColor.Red);
 
                 return this;
             }
 
             if (Selector == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when attempting to hover an element on the page.  The selector was NULL!");
+                Log.WL($"An error occurred when attempting to hover an element on the page.  The selector was NULL!", ConsoleColor.Red);
 
                 return this;
             }
@@ -1165,14 +1367,194 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to hover an element on the page.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when attempting to hover an element on the page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to hover an element on the page.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when attempting to hover an element on the page.  Message: " + e.Message, ConsoleColor.DarkRed);
+            }
+
+            return this;
+        }
+
+        public Handler ClearField() => ClearField(CurrentSelector, CurrentPage);
+        public Handler ClearField(Page Page) => ClearField(CurrentSelector, Page);
+        public Handler ClearField(Selectors Selector) => ClearField(Selector, CurrentPage);
+        public Handler ClearField(Selectors Selector, Page Page)
+        {
+            if (Page == null)
+            {
+                Log.WL($"An error occurred when attempting to clear an element's value.  The page was NULL!", ConsoleColor.Red);
+
+                return this;
+            }
+
+            if (Selector == null)
+            {
+                Log.WL($"An error occurred when attempting to clear an element's value.  The selector was NULL!", ConsoleColor.Red);
+
+                return this;
+            }
+
+            try
+            {
+                Page.FocusAsync(Selector).GetAwaiter().GetResult();
+                Page.Keyboard.DownAsync("Control").GetAwaiter().GetResult();
+                Page.Keyboard.PressAsync("A").GetAwaiter().GetResult();
+                Page.Keyboard.UpAsync("Control").GetAwaiter().GetResult();
+                Page.Keyboard.PressAsync("Backspace").GetAwaiter().GetResult();
+            }
+            catch (Exception e)
+            {
+                if (DebugMode)
+                    Log.WL($"A severe error occurred when attempting to clear an element's value.  Stacktrace: " + e, ConsoleColor.DarkRed);
+                else
+                    Log.WL($"A severe error occurred when attempting to clear an element's value.  Message: " + e.Message, ConsoleColor.DarkRed);
+            }
+
+            return this;
+        }
+
+        public Handler AddDialogEvent(Action<object, DialogEventArgs> Action) => AddDialogEvent(CurrentPage, Action);
+        public Handler AddDialogEvent(Page Page, Action<object, DialogEventArgs> Action)
+        {
+            if (Page == null)
+            {
+                Log.WL($"An error occurred when attempting to add a dialog event.  The page was NULL!", ConsoleColor.Red);
+
+                return this;
+            }
+
+            if (Action == null)
+            {
+                Log.WL($"An error occurred when attempting to add a dialog event.  The action was NULL!", ConsoleColor.Red);
+
+                return this;
+            }
+
+            try
+            {
+                Page.Dialog += new EventHandler<DialogEventArgs>(Action);
+            }
+            catch (Exception e)
+            {
+                if (DebugMode)
+                    Log.WL($"A severe error occurred when attempting to add a dialog event.  Stacktrace: " + e, ConsoleColor.DarkRed);
+                else
+                    Log.WL($"A severe error occurred when attempting to add a dialog event.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             return this;
         }
         #endregion
+
+        public string SolveImageCaptcha() => SolveImageCaptcha(CurrentPage, CurrentSelector);
+        public string SolveImageCaptcha(Page Page) => SolveImageCaptcha(Page, CurrentSelector);
+        public string SolveImageCaptcha(Selectors CaptchaSelector) => SolveImageCaptcha(CurrentPage, CaptchaSelector);
+        public string SolveImageCaptcha(Page Page, Selectors CaptchaSelector)
+        {
+            Stopwatch Watch = new Stopwatch();
+
+            Watch.Start();
+
+            if (string.IsNullOrWhiteSpace(CaptchaKey))
+            {
+                Log.WL($"An error occurred when attempting to solve the image captcha.  The captcha key was NULL!  You can set the key when you build the AsyncHandler.", ConsoleColor.Red);
+
+                return null;
+            }
+
+            if (Page == null)
+            {
+                Log.WL($"An error occurred when attempting to solve the image captcha.  The page was NULL!", ConsoleColor.Red);
+
+                return null;
+            }
+
+            if (CaptchaSelector == null)
+            {
+                Log.WL($"An error occurred when attempting to solve the image captcha.  The selector was NULL!", ConsoleColor.Red);
+
+                return null;
+            }
+
+            string Guid = new Guid().ToString();
+
+            CaptchaSelector.Screenshot(Page, Guid + ".png");
+
+            Log.WL($"Please wait for the Image Captcha to solve.  This usually takes 10 seconds, but can take up to 30 seconds.", ConsoleColor.Yellow);
+
+            try
+            {
+                _2CaptchaAPI._2Captcha Captcha = new _2CaptchaAPI._2Captcha(CaptchaKey);
+                _2CaptchaAPI._2Captcha.Result Result = Captcha.SolveImage(new FileStream(Guid + ".png", FileMode.Open, FileAccess.Read, FileShare.Read), _2CaptchaAPI.Enums.FileType.Png).Result;
+
+                Log.W($"Image Captcha solved!", ConsoleColor.DarkGreen);
+
+                Watch.Stop();
+
+                if (DebugMode)
+                    Log.WL(" Solved in " + (Watch.ElapsedMilliseconds / 1000.000).ToString("#,##0.0##") + "s.", ConsoleColor.DarkGreen);
+                else
+                    Log.NL();
+
+                return Result.ResponseObject.ToString();
+            }
+            catch (Exception e)
+            {
+                if (DebugMode)
+                    Log.WL($"A severe error occurred when attempting to solve the image captcha.  Stacktrace: " + e, ConsoleColor.DarkRed);
+                else
+                    Log.WL($"A severe error occurred when attempting to solve the image captcha.  Message: " + e.Message, ConsoleColor.DarkRed);
+            }
+
+            return null;
+        }
+
+        public Handler Screenshot(string SaveAs) => Screenshot(CurrentPage, SaveAs);
+        public Handler Screenshot(Page Page, string SaveAs)
+        {
+            if (Page == null)
+            {
+                Log.WL($"An error occurred when attempting to screenshot the page.  The page was NULL!", ConsoleColor.Red);
+
+                return this;
+            }
+
+            try
+            {
+                Page.ScreenshotAsync(SaveAs).GetAwaiter().GetResult();
+            }
+            catch (Exception e)
+            {
+                if (DebugMode)
+                    Log.WL($"A severe error occurred when attempting to screenshot the page.  Stacktrace: " + e, ConsoleColor.DarkRed);
+                else
+                    Log.WL($"A severe error occurred when attempting to screenshot the page.  Message: " + e.Message, ConsoleColor.DarkRed);
+            }
+
+            return this;
+        }
+
+        public string DownloadMedia(string Url, string SaveAs)
+        {
+            try
+            {
+                using (WebClient Client = new WebClient())
+                {
+                    Client.DownloadFile(new Uri(Url), SaveAs);
+                }
+
+                return SaveAs;
+            }
+            catch (Exception e)
+            {
+                if (DebugMode)
+                    Log.WL($"A severe error occurred when attempting to download media.  Stacktrace: " + e, ConsoleColor.DarkRed);
+                else
+                    Log.WL($"A severe error occurred when attempting to download media.  Message: " + e.Message, ConsoleColor.DarkRed);
+            }
+
+            return null;
+        }
 
         public void Pause() => Task.Delay(-1).GetAwaiter().GetResult();
 
@@ -1181,7 +1563,7 @@ namespace PuppeteerHandler
         {
             if (Page == null)
             {
-                Log.WL($"{ ChatColor.Red }An error occurred when attempting to retrieve the page's content.  The page was NULL!");
+                Log.WL($"An error occurred when attempting to retrieve the page's content.  The page was NULL!", ConsoleColor.Red);
 
                 return null;
             }
@@ -1193,9 +1575,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to hover an element on the page.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when attempting to hover an element on the page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to hover an element on the page.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when attempting to hover an element on the page.  Message: " + e.Message, ConsoleColor.DarkRed);
 
                 return null;
             }
@@ -1227,15 +1609,15 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to close the browser.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when attempting to close the browser.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to close the browser.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when attempting to close the browser.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
 
             Dispose();
         }
 
-        public AsyncHandler ToAsyncHandler() => new AsyncHandler(Fetcher, Browser, Context, DefaultTimeout, Proxy, Authentication);
+        public AsyncHandler ToAsyncHandler() => new AsyncHandler(Fetcher, Browser, Context, DefaultTimeout, Proxy, Authentication, CaptchaKey, Width, Height);
 
         public void Dispose()
         {
@@ -1256,12 +1638,23 @@ namespace PuppeteerHandler
             private BrowserContext Context;
             private string Proxy;
             private string Authentication;
+            private string CaptchaKey;
+            private int Width;
+            private int Height;
 
             public Builder(int DefaultTimeout = 30000, Product Browser = Product.Chrome)
             {
                 Fetcher = new BrowserFetcher(new BrowserFetcherOptions { Product = Browser });
 
                 this.DefaultTimeout = DefaultTimeout;
+            }
+
+            public Builder SetBrowserSize(int Width, int Height)
+            {
+                this.Width = Width;
+                this.Height = Height;
+
+                return this;
             }
 
             public Builder SetBrowserProxy(ProxyRotation Proxies)
@@ -1271,6 +1664,13 @@ namespace PuppeteerHandler
 
                 Proxy = Proxies.Next();
                 Authentication = Proxies[Proxy];
+
+                return this;
+            }
+
+            public Builder AllowCaptchas(string _2CaptchaKey)
+            {
+                CaptchaKey = _2CaptchaKey;
 
                 return this;
             }
@@ -1297,16 +1697,16 @@ namespace PuppeteerHandler
                 catch (Exception e)
                 {
                     if (DebugMode)
-                        Log.WL($"{ ChatColor.Red }A severe error occurred when attempting to create a new browser.  Stacktrace: " + e);
+                        Log.WL($"A severe error occurred when attempting to create a new browser.  Stacktrace: " + e, ConsoleColor.DarkRed);
                     else
-                        Log.WL($"{ ChatColor.Red }A severe error occurred when attempting to create a new browser.  Message: " + e.Message);
+                        Log.WL($"A severe error occurred when attempting to create a new browser.  Message: " + e.Message, ConsoleColor.DarkRed);
                 }
 
                 return this;
             }
 
-            public Handler Build() => new Handler(Fetcher, Browser, Context, DefaultTimeout, Proxy, Authentication);
-            public AsyncHandler BuildAsync() => new AsyncHandler(Fetcher, Browser, Context, DefaultTimeout, Proxy, Authentication);
+            public Handler Build() => new Handler(Fetcher, Browser, Context, DefaultTimeout, Proxy, Authentication, CaptchaKey, Width, Height);
+            public AsyncHandler BuildAsync() => new AsyncHandler(Fetcher, Browser, Context, DefaultTimeout, Proxy, Authentication, CaptchaKey, Width, Height);
         }
     }
 }

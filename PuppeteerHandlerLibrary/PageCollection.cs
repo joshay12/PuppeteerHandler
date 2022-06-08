@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace PuppeteerHandler
@@ -28,7 +29,7 @@ namespace PuppeteerHandler
 
         public void OverrideTimeout(int Timeout) => DefaultTimeout = Timeout;
 
-        public async Task Add(string Page, WaitUntilNavigation WaitUntil = WaitUntilNavigation.DOMContentLoaded, string Authentication = null)
+        public async Task Add(string Page, WaitUntilNavigation WaitUntil = WaitUntilNavigation.DOMContentLoaded, string Authentication = null, int Width = 0, int Height = 0)
         {
             try
             {
@@ -39,17 +40,40 @@ namespace PuppeteerHandler
 
                 await P.GoToAsync(Page, new NavigationOptions { Timeout = DefaultTimeout, WaitUntil = new WaitUntilNavigation[1] { WaitUntil } });
 
-                Add(P);
+                await Add(P, Width, Height);
             }
             catch (Exception e)
             {
                 if (AsyncHandler.DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to open a new page.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when attempting to open a new page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to open a new page.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when attempting to open a new page.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
         }
-        public void Add(Page Page) => Pages.Add(Page);
+        public async Task Add(Page Page, int Width = 0, int Height = 0)
+        {
+            if (Page == null)
+            {
+                Log.WL($"An error occurred when attempting to open a new page.  The page was NULL!", ConsoleColor.Red);
+
+                return;
+            }
+
+            try
+            {
+                if (Width > 150 && Height > 150)
+                    await Page.SetViewportAsync(new ViewPortOptions { Width = Width, Height = Height });
+
+                Pages.Add(Page);
+            }
+            catch (Exception e)
+            {
+                if (AsyncHandler.DebugMode)
+                    Log.WL($"A severe error occurred when attempting to open a new page.  Stacktrace: " + e, ConsoleColor.DarkRed);
+                else
+                    Log.WL($"A severe error occurred when attempting to open a new page.  Message: " + e.Message, ConsoleColor.DarkRed);
+            }
+        }
 
         public async Task Remove(Page Page)
         {
@@ -61,9 +85,9 @@ namespace PuppeteerHandler
             catch (Exception e)
             {
                 if (AsyncHandler.DebugMode)
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to close a page.  Stacktrace: " + e);
+                    Log.WL($"A severe error occurred when attempting to close a page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
-                    Log.WL($"{ ChatColor.DarkRed }A severe error occurred when attempting to close a page.  Message: " + e.Message);
+                    Log.WL($"A severe error occurred when attempting to close a page.  Message: " + e.Message, ConsoleColor.DarkRed);
             }
         }
 

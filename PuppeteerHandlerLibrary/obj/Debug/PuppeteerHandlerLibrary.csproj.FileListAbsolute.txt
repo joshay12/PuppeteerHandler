@@ -41,3 +41,6 @@ C:\Users\Joshua\source\repos\PuppeteerHandlerLibrary\PuppeteerHandlerLibrary\bin
 C:\Users\Joshua\source\repos\PuppeteerHandlerLibrary\PuppeteerHandlerLibrary\bin\Debug\PuppeteerHandler.pdb
 C:\Users\Joshua\source\repos\PuppeteerHandlerLibrary\PuppeteerHandlerLibrary\obj\Debug\PuppeteerHandler.dll
 C:\Users\Joshua\source\repos\PuppeteerHandlerLibrary\PuppeteerHandlerLibrary\obj\Debug\PuppeteerHandler.pdb
+C:\Users\Joshua\source\repos\PuppeteerHandlerLibrary\PuppeteerHandlerLibrary\bin\Debug\2Captcha.dll
+C:\Users\Joshua\source\repos\PuppeteerHandlerLibrary\PuppeteerHandlerLibrary\bin\Debug\System.Diagnostics.DiagnosticSource.dll
+C:\Users\Joshua\source\repos\PuppeteerHandlerLibrary\PuppeteerHandlerLibrary\bin\Debug\System.Diagnostics.DiagnosticSource.xml

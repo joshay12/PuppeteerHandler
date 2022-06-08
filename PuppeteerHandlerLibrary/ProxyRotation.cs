@@ -1,5 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace PuppeteerHandler
 {
@@ -26,7 +29,7 @@ namespace PuppeteerHandler
         {
             if (Proxy == null)
             {
-                Log.WL($"{ ChatColor.Red }There was an issue adding your User Authenticated Proxy.  The proxy was NULL.");
+                Log.WL($"There was an issue adding your User Authenticated Proxy.  The proxy was NULL.", ConsoleColor.Red);
 
                 return;
             }
@@ -35,7 +38,7 @@ namespace PuppeteerHandler
 
             if (Info.Length != 4)
             {
-                Log.WL($"{ ChatColor.Red }There was an issue adding your User Authenticated Proxy.  The proxy length had { Info.Length } specifications, when it need 4.");
+                Log.WL($"There was an issue adding your User Authenticated Proxy.  The proxy length had { Info.Length } specifications, when it need 4.", ConsoleColor.Red);
 
                 return;
             }
