@@ -819,7 +819,7 @@ namespace PuppeteerHandler
                 return this;
             }
 
-            public async Task<Builder> CreateBrowserAsync(bool Headless = false, bool Incognito = false)
+            public async Task<Builder> CreateBrowserAsync(bool Headless = false, bool Incognito = false, Action<object, DownloadProgressChangedEventArgs> DownloadProgress = null)
             {
                 try
                 {
@@ -828,6 +828,9 @@ namespace PuppeteerHandler
                         Headless = Headless,
                         Args = !string.IsNullOrWhiteSpace(Proxy) ? new string[1] { "--proxy-server=" + Proxy } : new string[0]
                     };
+
+                    if (DownloadProgress != null)
+                        Fetcher.DownloadProgressChanged += (Object, Args) => { DownloadProgress.Invoke(Object, Args); };
 
                     await Fetcher.DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
 
@@ -1675,7 +1678,7 @@ namespace PuppeteerHandler
                 return this;
             }
 
-            public Builder CreateBrowser(bool Headless = false, bool Incognito = false)
+            public Builder CreateBrowser(bool Headless = false, bool Incognito = false, Action<object, DownloadProgressChangedEventArgs> DownloadProgress = null)
             {
                 try
                 {
@@ -1684,6 +1687,9 @@ namespace PuppeteerHandler
                         Headless = Headless,
                         Args = !string.IsNullOrWhiteSpace(Proxy) ? new string[1] { "--proxy-server=" + Proxy } : new string[0]
                     };
+
+                    if (DownloadProgress != null)
+                        Fetcher.DownloadProgressChanged += (Object, Args) => { DownloadProgress.Invoke(Object, Args); };
 
                     _ = Fetcher.DownloadAsync(BrowserFetcher.DefaultChromiumRevision).Result;
 
