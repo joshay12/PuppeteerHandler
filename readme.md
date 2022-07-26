@@ -6,7 +6,23 @@ In this API, you have a choice between keeping Puppeteer async or sync.  If you 
 
 ## Error Handling
 
-All errors are handled for you and will be logged to the Console accordingly.  There is also a Debug mode that you can enable with `Handler.DebugMode = true;` or `AsyncHandler.DebugMode = true;`, allowing the Stacktrace of all handled errors to be printed.  If this is false, then it will only print the error message.
+All errors are handled for you and will be logged to the Console accordingly.  There is also a Debug mode that you can enable with `Handler.DebugMode = true;` or `AsyncHandler.DebugMode = true;`, allowing the Stacktrace of all handled errors to be printed.  If this is false, then it will only print the error message.  However, if you want to gather specific data on the errors that are handled, that can happen through the following.
+
+```CSharp
+NAME.ExceptionThrown += NAME_ExceptionThrown;
+```
+
+With a method to give access.
+
+```CSharp
+private static void NAME_ExceptionThrown(Exception Exception, Methods Method, params object[] MethodParameters) {
+
+}
+```
+
+The `Exception` is the exception thrown.
+The `Method` is the method the exception was thrown in.
+The `MethodParameters` are the parameters that were provided to the method.
 
 ## Creating a Handler
 
