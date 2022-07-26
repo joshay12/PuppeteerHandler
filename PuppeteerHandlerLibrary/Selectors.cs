@@ -11,7 +11,7 @@ namespace PuppeteerHandler
     {
         private readonly string[] Values;
 
-        public Selectors(string Id) => Values = Selectors.FromSelector("#" + Id).Values;
+        public Selectors(string Id) => Values = FromSelector("#" + Id).Values;
         private Selectors(string[] Selectors) => Values = Selectors;
 
         public static Selectors FromSelector(string Selector) => new Selectors(new string[1] { Selector });

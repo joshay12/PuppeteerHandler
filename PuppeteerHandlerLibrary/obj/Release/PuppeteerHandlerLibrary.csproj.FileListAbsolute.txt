@@ -40,3 +40,7 @@ C:\Users\Joshua\source\repos\PuppeteerHandlerLibrary\PuppeteerHandlerLibrary\obj
 C:\Users\Joshua\source\repos\PuppeteerHandlerLibrary\PuppeteerHandlerLibrary\obj\Release\PuppeteerHandlerLibrary.csproj.CopyComplete
 C:\Users\Joshua\source\repos\PuppeteerHandlerLibrary\PuppeteerHandlerLibrary\obj\Release\PuppeteerHandler.dll
 C:\Users\Joshua\source\repos\PuppeteerHandlerLibrary\PuppeteerHandlerLibrary\obj\Release\PuppeteerHandler.pdb
+C:\Users\Joshua\source\repos\PuppeteerHandlerLibrary\PuppeteerHandlerLibrary\bin\Release\2Captcha.dll
+C:\Users\Joshua\source\repos\PuppeteerHandlerLibrary\PuppeteerHandlerLibrary\bin\Release\System.Diagnostics.DiagnosticSource.dll
+C:\Users\Joshua\source\repos\PuppeteerHandlerLibrary\PuppeteerHandlerLibrary\bin\Release\System.Diagnostics.DiagnosticSource.xml
+C:\Users\Joshua\source\repos\PuppeteerHandlerLibrary\PuppeteerHandlerLibrary\obj\Release\PuppeteerHandlerLibrary.csproj.AssemblyReference.cache

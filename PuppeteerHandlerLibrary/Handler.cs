@@ -11,8 +11,65 @@ using System.Threading.Tasks;
 
 namespace PuppeteerHandler
 {
+    public enum AsyncMethods
+    {
+        MakeNewPageAsync,
+        GoToUrlAsync,
+        BackOnePageAsync,
+        ForwardOnePageAsync,
+        WaitAsync,
+        WaitForDOMLoadAsync,
+        WaitForFullLoadAsync,
+        WaitForNetwork0LoadAsync,
+        WaitForNetwork2LoadAsync,
+        WaitForSelectorAsync,
+        WaitForFunctionAsync,
+        WaitForTimeoutAsync,
+        WaitForExpressionAsync,
+        ClickPageAsync,
+        TypeAsync,
+        HoverAsync,
+        ClearFieldAsync,
+        AddDialogEvent,
+        SolveCaptchaImageAsync,
+        ScreenshotAsync,
+        DownloadMediaAsync,
+        RetrieveContentAsync,
+        CloseBrowserAsync
+    }
+
+    public enum Methods
+    {
+        MakeNewPage,
+        GoToUrl,
+        BackOnePage,
+        ForwardOnePage,
+        Wait,
+        WaitForDOMLoad,
+        WaitForFullLoad,
+        WaitForNetwork0Load,
+        WaitForNetwork2Load,
+        WaitForSelector,
+        WaitForFunction,
+        WaitForTimeout,
+        WaitForExpression,
+        ClickPage,
+        Type,
+        Hover,
+        ClearField,
+        AddDialogEvent,
+        SolveImageCaptcha,
+        Screenshot,
+        DownloadMedia,
+        RetrieveContent,
+        CloseBrowser
+    }
+
     public sealed class AsyncHandler : IDisposable
     {
+        public delegate void ExceptionThrownEvent(Exception Exception, AsyncMethods Method, params object[] MethodParameters);
+        public event ExceptionThrownEvent ExceptionThrown;
+
         public static bool DebugMode { get; set; } = false;
 
         private int DefaultTimeout;
@@ -58,7 +115,19 @@ namespace PuppeteerHandler
             if (string.IsNullOrWhiteSpace(Location))
                 return this;
 
-            await Pages.Add(Location, WaitUntil, Authentication, Width, Height);
+            try
+            {
+                await Pages.Add(Location, WaitUntil, Authentication, Width, Height);
+            }
+            catch (Exception e)
+            {
+                ExceptionThrown?.Invoke(e, AsyncMethods.MakeNewPageAsync, Location, WaitUntil);
+
+                if (DebugMode)
+                    Log.WL($"A severe error occurred when attempting to open a new page.  Stacktrace: " + e, ConsoleColor.DarkRed);
+                else
+                    Log.WL($"A severe error occurred when attempting to open a new page.  Message: " + e.Message, ConsoleColor.DarkRed);
+            }
 
             if (CurrentPage == null)
                 CurrentPage = Pages.Last();
@@ -81,6 +150,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.MakeNewPageAsync);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when attempting to open a new page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -141,6 +212,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.GoToUrlAsync, Url, Page, WaitUntil);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when trying to go to the URL.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -165,6 +238,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.BackOnePageAsync, Page, WaitUntil);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when trying to go back a page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -189,6 +264,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.ForwardOnePageAsync, Page, WaitUntil);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when trying to go forward a page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -200,7 +277,9 @@ namespace PuppeteerHandler
         #endregion
 
         #region Page Waiting ASYNC
-        public async Task<AsyncHandler> Wait(int Milliseconds)
+        [Obsolete("This method is obsolete.  Please use \"WaitAsync(Milliseconds);\" instead.", false)]
+        public async Task<AsyncHandler> Wait(int Milliseconds) => await WaitAsync(Milliseconds);
+        public async Task<AsyncHandler> WaitAsync(int Milliseconds)
         {
             try
             {
@@ -208,6 +287,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.WaitAsync, Milliseconds);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when delaying the task.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -232,6 +313,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.WaitForDOMLoadAsync, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when waiting for a page (DOM).  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -256,6 +339,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.WaitForFullLoadAsync, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when waiting for a page (Load).  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -280,6 +365,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.WaitForNetwork0LoadAsync, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when waiting for a page (Net0).  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -304,6 +391,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.WaitForNetwork2LoadAsync, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when waiting for a page (Net2).  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -328,6 +417,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.WaitForSelectorAsync, Selector, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when waiting for a selector.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -352,6 +443,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.WaitForFunctionAsync, Function, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when waiting for a function.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -376,6 +469,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.WaitForTimeoutAsync, MillisecondDuration, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when waiting for timeout.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -400,6 +495,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.WaitForExpressionAsync, Expression, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when waiting for an expression.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -448,6 +545,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.ClickPageAsync, Selector, Button, Delay, ClickAmount, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when attempting to click the page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -489,6 +588,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.TypeAsync, Selector, Message, Delay, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when attempting to type on the page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -523,6 +624,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.HoverAsync, Selector, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when attempting to hover an element on the page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -561,6 +664,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.ClearFieldAsync, Selector, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when attempting to clear an element's value.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -593,6 +698,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.AddDialogEvent, Page, Action);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when attempting to add a dialog event.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -603,6 +710,7 @@ namespace PuppeteerHandler
         }
         #endregion
 
+        #region Page Misc ASYNC
         public async Task<string> SolveImageCaptchaAsync() => await SolveImageCaptchaAsync(CurrentPage, CurrentSelector);
         public async Task<string> SolveImageCaptchaAsync(Page Page) => await SolveImageCaptchaAsync(Page, CurrentSelector);
         public async Task<string> SolveImageCaptchaAsync(Selectors CaptchaSelector) => await SolveImageCaptchaAsync(CurrentPage, CaptchaSelector);
@@ -629,21 +737,26 @@ namespace PuppeteerHandler
                 return null;
             }
 
-            string Guid = new Guid().ToString();
-
-            await CaptchaSelector.ScreenshotAsync(Page, Guid + ".png");
-
-            Log.WL($"Please wait for the Image Captcha to solve.  This usually takes 10 seconds, but can take up to 30 seconds.", ConsoleColor.DarkYellow);
+            string Guid = System.Guid.NewGuid().ToString();
 
             try
             {
+                if (!Directory.Exists("temp"))
+                    Directory.CreateDirectory("temp");
+
+                await CaptchaSelector.ScreenshotAsync(Page, "temp/" + Guid + ".png");
+
+                Log.WL($"Please wait for the Image Captcha to solve.  This usually takes 10 seconds, but can take up to 30 seconds.", ConsoleColor.DarkYellow);
+
                 _2CaptchaAPI._2Captcha Captcha = new _2CaptchaAPI._2Captcha(CaptchaKey);
-                _2CaptchaAPI._2Captcha.Result Result = await Captcha.SolveImage(new FileStream(Guid + ".png", FileMode.Open, FileAccess.Read, FileShare.Read), _2CaptchaAPI.Enums.FileType.Png);
+                _2CaptchaAPI._2Captcha.Result Result = await Captcha.SolveImage(new FileStream("temp/" + Guid + ".png", FileMode.Open, FileAccess.Read, FileShare.Read), _2CaptchaAPI.Enums.FileType.Png);
 
                 return Result.ResponseObject.ToString();
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.SolveCaptchaImageAsync, Page, CaptchaSelector);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when attempting to solve the image captcha.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -669,6 +782,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.ScreenshotAsync, Page, SaveAs);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when attempting to screenshot the page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -691,6 +806,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.DownloadMediaAsync, Url, SaveAs);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when attempting to download media.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -718,6 +835,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.RetrieveContentAsync, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when attempting to hover an element on the page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -752,6 +871,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, AsyncMethods.CloseBrowserAsync);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when attempting to close the browser.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -760,6 +881,7 @@ namespace PuppeteerHandler
 
             Dispose();
         }
+        #endregion
 
         public Handler ToHandler() => new Handler(Fetcher, Browser, Context, DefaultTimeout, Proxy, Authentication, CaptchaKey, Width, Height);
 
@@ -859,6 +981,9 @@ namespace PuppeteerHandler
 
     public sealed class Handler : IDisposable
     {
+        public delegate void ExceptionThrownEvent(Exception Exception, Methods Method, params object[] MethodParameters);
+        public event ExceptionThrownEvent ExceptionThrown;
+
         public static bool DebugMode { get; set; } = false;
 
         private int DefaultTimeout;
@@ -904,7 +1029,19 @@ namespace PuppeteerHandler
             if (string.IsNullOrWhiteSpace(Location))
                 return this;
 
-            Pages.Add(Location, WaitUntil, Authentication, Width, Height).GetAwaiter().GetResult();
+            try
+            {
+                Pages.Add(Location, WaitUntil, Authentication, Width, Height).GetAwaiter().GetResult();
+            }
+            catch (Exception e)
+            {
+                ExceptionThrown?.Invoke(e, Methods.MakeNewPage, Location, WaitUntil);
+
+                if (DebugMode)
+                    Log.WL($"A severe error occurred when attempting to open a new page.  Stacktrace: " + e, ConsoleColor.DarkRed);
+                else
+                    Log.WL($"A severe error occurred when attempting to open a new page.  Message: " + e.Message, ConsoleColor.DarkRed);
+            }
 
             if (CurrentPage == null)
                 CurrentPage = Pages.Last();
@@ -927,7 +1064,9 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
-                if (AsyncHandler.DebugMode)
+                ExceptionThrown?.Invoke(e, Methods.MakeNewPage);
+
+                if (DebugMode)
                     Log.WL($"A severe error occurred when attempting to open a new page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
                     Log.WL($"A severe error occurred when attempting to open a new page.  Message: " + e.Message, ConsoleColor.DarkRed);
@@ -987,6 +1126,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, Methods.GoToUrl, Url, Page, WaitUntil);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when trying to go to the URL.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -1011,6 +1152,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, Methods.BackOnePage, Page, WaitUntil);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when trying to go back a page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -1035,6 +1178,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, Methods.ForwardOnePage, Page, WaitUntil);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when trying to go forward a page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -1045,7 +1190,7 @@ namespace PuppeteerHandler
         }
         #endregion
 
-        #region Page Waiting ASYNC
+        #region Page Waiting
         public Handler Wait(int Milliseconds)
         {
             try
@@ -1054,6 +1199,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, Methods.Wait, Milliseconds);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when delaying the task.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -1078,6 +1225,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, Methods.WaitForDOMLoad, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when waiting for a page (DOM).  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -1102,6 +1251,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, Methods.WaitForFullLoad, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when waiting for a page (Load).  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -1126,6 +1277,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, Methods.WaitForNetwork0Load, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when waiting for a page (Net0).  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -1150,6 +1303,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, Methods.WaitForNetwork2Load, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when waiting for a page (Net2).  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -1174,6 +1329,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, Methods.WaitForSelector, Selector, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when waiting for a selector.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -1198,6 +1355,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, Methods.WaitForFunction, Function, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when waiting for a function.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -1222,6 +1381,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, Methods.WaitForTimeout, MillisecondDuration, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when waiting for timeout.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -1246,6 +1407,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, Methods.WaitForExpression, Expression, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when waiting for an expression.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -1256,7 +1419,7 @@ namespace PuppeteerHandler
         }
         #endregion
 
-        #region Page Input ASYNC
+        #region Page Input
         public Handler ClickPage() => ClickPage(CurrentSelector, MouseButton.Left, 0, 1, CurrentPage);
         public Handler ClickPage(Selectors Selector) => ClickPage(Selector, MouseButton.Left, 0, 1, CurrentPage);
         public Handler ClickPage(Page Page) => ClickPage(CurrentSelector, MouseButton.Left, 0, 1, Page);
@@ -1294,6 +1457,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, Methods.ClickPage, Selector, Button, Delay, ClickAmount, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when attempting to click the page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -1335,6 +1500,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, Methods.Type, Selector, Message, Delay, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when attempting to type on the page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -1369,6 +1536,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, Methods.Hover, Selector, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when attempting to hover an element on the page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -1407,6 +1576,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, Methods.ClearField, Selector, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when attempting to clear an element's value.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -1439,6 +1610,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, Methods.AddDialogEvent, Page, Action);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when attempting to add a dialog event.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -1449,6 +1622,7 @@ namespace PuppeteerHandler
         }
         #endregion
 
+        #region Page Misc
         public string SolveImageCaptcha() => SolveImageCaptcha(CurrentPage, CurrentSelector);
         public string SolveImageCaptcha(Page Page) => SolveImageCaptcha(Page, CurrentSelector);
         public string SolveImageCaptcha(Selectors CaptchaSelector) => SolveImageCaptcha(CurrentPage, CaptchaSelector);
@@ -1479,16 +1653,19 @@ namespace PuppeteerHandler
                 return null;
             }
 
-            string Guid = new Guid().ToString();
-
-            CaptchaSelector.Screenshot(Page, Guid + ".png");
-
-            Log.WL($"Please wait for the Image Captcha to solve.  This usually takes 10 seconds, but can take up to 30 seconds.", ConsoleColor.Yellow);
-
             try
             {
+                if (!Directory.Exists("temp"))
+                    Directory.CreateDirectory("temp");
+
+                string Guid = System.Guid.NewGuid().ToString();
+
+                CaptchaSelector.Screenshot(Page, "temp/" + Guid + ".png");
+
+                Log.WL($"Please wait for the Image Captcha to solve.  This usually takes 10 seconds, but can take up to 30 seconds.", ConsoleColor.Yellow);
+
                 _2CaptchaAPI._2Captcha Captcha = new _2CaptchaAPI._2Captcha(CaptchaKey);
-                _2CaptchaAPI._2Captcha.Result Result = Captcha.SolveImage(new FileStream(Guid + ".png", FileMode.Open, FileAccess.Read, FileShare.Read), _2CaptchaAPI.Enums.FileType.Png).Result;
+                _2CaptchaAPI._2Captcha.Result Result = Captcha.SolveImage(new FileStream("temp/" + Guid + ".png", FileMode.Open, FileAccess.Read, FileShare.Read), _2CaptchaAPI.Enums.FileType.Png).Result;
 
                 Log.W($"Image Captcha solved!", ConsoleColor.DarkGreen);
 
@@ -1503,6 +1680,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, Methods.SolveImageCaptcha, Page, CaptchaSelector);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when attempting to solve the image captcha.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -1528,6 +1707,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, Methods.SolveImageCaptcha, Page, SaveAs);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when attempting to screenshot the page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -1550,6 +1731,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, Methods.DownloadMedia, Url, SaveAs);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when attempting to download media.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -1577,6 +1760,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, Methods.RetrieveContent, Page);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when attempting to hover an element on the page.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -1611,6 +1796,8 @@ namespace PuppeteerHandler
             }
             catch (Exception e)
             {
+                ExceptionThrown?.Invoke(e, Methods.CloseBrowser);
+
                 if (DebugMode)
                     Log.WL($"A severe error occurred when attempting to close the browser.  Stacktrace: " + e, ConsoleColor.DarkRed);
                 else
@@ -1619,6 +1806,7 @@ namespace PuppeteerHandler
 
             Dispose();
         }
+        #endregion
 
         public AsyncHandler ToAsyncHandler() => new AsyncHandler(Fetcher, Browser, Context, DefaultTimeout, Proxy, Authentication, CaptchaKey, Width, Height);
 
